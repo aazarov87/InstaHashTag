@@ -9,7 +9,6 @@ public class InstaUser {
 
     private String login;
     private String password;
-    private boolean isAuthenticationOk;
     private Instagram4j instagram;
     private List<Map.Entry<String, Integer>> listHashTag;
 
@@ -32,14 +31,6 @@ public class InstaUser {
         this.login = login;
     }
 
-    public boolean isAuthenticationOk() {
-        return isAuthenticationOk;
-    }
-
-    public void setAuthenticationOk(boolean authenticationOk) {
-        isAuthenticationOk = authenticationOk;
-    }
-
     public Instagram4j getInstagram() {
         return instagram;
     }
@@ -52,11 +43,14 @@ public class InstaUser {
     public void clearData(){
         this.login = null;
         this.password = null;
-        this.isAuthenticationOk = false;
         this.instagram = null;
         this.listHashTag = null;
     }
 
+    /**
+     *
+     * @param loginAndPass строка для парсинга логина пароля
+     */
     public void setLoginAndPass(String loginAndPass){
         int idx;
         String login = null;

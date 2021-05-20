@@ -28,6 +28,9 @@ public class Bot extends TelegramLongPollingBot {
     private String botUsername;
     private String botToken;
 
+    //максимальное число символов для одного сообщения отправляемого в телеграмм
+    private int maxLenghtForMessage = 4096;
+
     // map зарегистрированных пользователей
     private HashMap<Integer, InstaUser> mapUser = new HashMap<Integer, InstaUser>();
 
@@ -39,9 +42,11 @@ public class Bot extends TelegramLongPollingBot {
 
         Long chatId = update.getMessage().getChatId();
 
+        // получаем идентификатор пользователя в чате
         Integer userBotId = update.getMessage().getFrom().getId();
-        InstaUser instaUser;// = new InstaUser();
+        InstaUser instaUser;
 
+        // запоминаем зарегистрированных пользователе
         if (mapUser.containsKey(userBotId))
             instaUser = mapUser.get(userBotId);
         else {
@@ -57,8 +62,6 @@ public class Bot extends TelegramLongPollingBot {
         System.out.println("inputText = " + inputText);
         try {
             if (inputText.startsWith("/start")) {
-                //SendMessage message = new SendMessage();
-                //message.setChatId(chatId);
                 message.setText("Привет! Введите логи и пароль для инстаграмм через пробел");
                 execute(message);
             } else if (inputText.startsWith("/clear")) {
@@ -70,13 +73,6 @@ public class Bot extends TelegramLongPollingBot {
                 if (!inputText.equals("null")) { // запись логина и пароля
                     System.out.println("instaUser.getLogin() = " + instaUser.getLogin());
                     if (instaUser.getLogin() == null) {
-                        /*String[] loginAndPassword = new String[]{"1", "2"};
-                        loginAndPassword[0] = null;
-                        loginAndPassword[1] = null;
-                        loginAndPassword = inputText.split(" ");
-
-                        System.out.println("loginAndPassword[0].isEmpty() = " + loginAndPassword[0]);
-                        System.out.println("loginAndPassword[1].isEmpty() = " + loginAndPassword[1]);*/
 
                         instaUser.setLoginAndPass(inputText);
                         if (instaUser.getLogin() == null || instaUser.getPassword() == null) {
@@ -84,13 +80,10 @@ public class Bot extends TelegramLongPollingBot {
                             execute(message);
                             instaUser.clearData();
                         } else {
-                            /*instaUser.setLogin(loginAndPassword[0]);
-                            instaUser.setPassword(loginAndPassword[1]);*/
-
                             Authentication authentication = new Authentication(instaUser);
                             authentication.run();
 
-                            System.out.println(instaUser.getInstagram());
+                            //System.out.println(instaUser.getInstagram());
                             if (instaUser.getInstagram() != null) {
                                 message.setText("Авторизация в инстгарамм с логином " + instaUser.getLogin() + " выполнена успешно. Введите ключевое слово для поиска хэштегов");
                                 execute(message);
@@ -101,24 +94,52 @@ public class Bot extends TelegramLongPollingBot {
                             }
                         }
                     } else {
-                        System.out.println("Обработка слова");
+                        System.out.println("Обработка поисковой фразы");
 
                         InstaCommand instaCommand = new InstaCommand();
                         try {
                             instaUser.setListHashTag( instaCommand.getHashTagList(inputText, instaUser.getInstagram()));
+
+                            String textForSend = null;
+                            int prevValue = 0;
+                            //System.out.println("мапа собрана");
                             for (Map.Entry<String, Integer> pair : instaUser.getListHashTag()) {
-                                System.out.println(pair.getKey() + " = " + pair.getValue());
-                                message.setText(pair.getKey() + " = " + pair.getValue());
+                                //System.out.println(pair.getKey() + " = " + pair.getValue());
+
+                                if (prevValue == 0 || prevValue != pair.getValue()){
+                                    prevValue = pair.getValue();
+                                    message.setText("количество = " + prevValue);
+                                    execute(message);
+
+                                    if (textForSend != null){
+                                        message.setText(textForSend);
+                                        execute(message);
+                                        textForSend = null;
+                                    }
+                                }
+
+                                if (textForSend == null)
+                                    textForSend = pair.getKey() + " ";
+                                else if ( textForSend == null || (textForSend.length() + pair.getKey().length() + pair.getValue().toString().length() + 1) < maxLenghtForMessage)
+                                    textForSend = textForSend + pair.getKey() + " ";
+                                else {
+                                    //System.out.println("отправляем textForSend = " + textForSend);
+                                    message.setText(textForSend);
+                                    execute(message);
+                                    textForSend = null;
+                                }
+                            }
+
+                            if (textForSend != null){
+                                message.setText(textForSend);
                                 execute(message);
                             }
                             instaUser.getListHashTag().clear();
 
                         } catch (IOException e) {
                             e.printStackTrace();
+                            instaUser.clearData();
                         }
-
-
-
                     }
 
                 }
